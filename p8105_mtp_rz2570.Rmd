@@ -6,6 +6,75 @@ output: github_document
 ---
 
 ```{r}
+library(tidyverse)
+library(readxl)
+```
 
+```{r read and clean data}
+horn_df = read_excel("data/p8105_mtp_data.xlsx", range = "A9:I1230") %>% 
+  janitor::clean_names()
+
+horn_df$eop_size_mm[is.na(pull(horn_df, eop_size_mm))] = 0
+
+horn_df = horn_df %>% 
+  mutate(sex = factor(sex),
+         age_group = factor(age_group),
+         eop_size = factor(eop_size),
+         eop_visibility_classification = factor(eop_visibility_classification),
+         eop_shape = factor(eop_shape),
+         fhp_category = factor(fhp_category)
+         )
+
+horn_df %>% 
+  group_by(sex) %>% 
+  summarize(n = n()) %>% 
+  knitr::kable()
+
+horn_df %>% 
+  group_by(age_group) %>% 
+  summarize(n = n()) %>% 
+  knitr::kable()
+
+horn_df %>% 
+  group_by(sex, age_group) %>% 
+  summarize(n = n()) %>%
+  pivot_wider(names_from = age_group,
+              values_from = n) %>% 
+  mutate(sex = recode(sex, '0' = "Female", '1' = "Male")) %>% 
+  knitr::kable()
+```
+
+* Data cleaning: read the excel and change variable names to snake case, then fill the missing data in  `eop_size_mm` with `0` create and ordered factors for catagorical variables.  
+* Describe dataset: there are values of `r ncol(horn_df)` related variables collecting from `r nrow(horn_df)` participants. The participants are defined by their sex, age, as well as the size, visibility and shape of their external occipital protuberance (EOP). There are also variables containing information of the degree of forward head protraction (FHP). There are numeric as well as categorical variables respectively depicting the value and level of corresponding variable.  
+* The age and gender distribution: the gender of participants generally distributes equally among men and women, with 614 women and 607 men. The participants come from 8 age group, among which the 2nd group (18-30 age) has the most (303) participants, and 8th group (60+ age) has the least (1) participant. The distribution of age looks right-skewed since the mode locates on group 2 and there are less participants in age group 6+. From the combined table of gender and age group, we can see the distribution of age is generally the same across gender. Also, there is no male participants in age group 8. 
+
+```{r plot categorical variables}
+horn_df %>% 
+  ggplot(aes(x = eop_size)) +
+  geom_bar()
+
+horn_df %>% 
+  ggplot(aes(x = eop_visibility_classification)) +
+  geom_bar()
+
+horn_df %>% 
+  ggplot(aes(x = eop_shape)) +
+  geom_bar()
+
+horn_df %>% 
+  ggplot(aes(x = fhp_category)) +
+  geom_bar()
+```
+
+* Issues in data: from the barplots of each **categorical variable** we can see the distribution of these variables.  
+  + For `eop_size`, there is one value --- `14.6` --- that does not correctly implement the definition based on underlying continuous variable `eop_size_mm`, which is a decimal instead of an integer.  
+  + For `eop_visibility_classification`, it correctly implement the definition based on underlying continuous variable `eop_size_mm`.  
+  + For `eop_shape`, there are some missing values need to be addressed.  
+  + For `fhp_category`, there is one value --- `30.8` --- that does not correctly implement the definition based on underlying continuous variable `fhp_size_mm`. 
+* The rows of two erroneous value are respectively extracted as below:
+
+```{r}
+filter(horn_df, eop_size == "14.6")
+filter(horn_df, fhp_category == "30.8")
 ```
 
