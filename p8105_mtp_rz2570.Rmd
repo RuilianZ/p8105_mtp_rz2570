@@ -8,6 +8,7 @@ output: github_document
 ```{r}
 library(tidyverse)
 library(readxl)
+library(ggpubr)
 ```
 
 
@@ -84,22 +85,34 @@ filter(horn_df, fhp_category == "30.8")
 ## Problem 2 - Visualization
 
 ```{r}
-horn_df %>% 
+fhp_plot = horn_df %>% 
   ggplot(aes(x = age, y = fhp_size_mm, group = sex, fill = sex)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", position = "dodge") +
   labs(x = "Age",
        y = "Forward Head Protraction Size (mm)") +
-  scale_x_continuous(breaks = c(seq(from = 0, to = 80, by = 20))) + 
-  scale_fill_discrete(name = "Sex", labels = c("Female", "Male"))
+  scale_x_continuous(breaks = c(seq(from = 0, to = 80, by = 10))) + 
+  scale_fill_discrete(name = "Sex", labels = c("Female", "Male")) +
+  labs(subtitle = "A")
 
-horn_df %>% 
+eop_plot = horn_df %>% 
   mutate(eop_enlarged = ifelse(eop_size %in% c(0, 1), "non_enlarged", "enlarged")) %>% 
-  group_by(age_group, eop_enlarged) %>% 
+  group_by(sex, age_group, eop_enlarged) %>% 
   summarize(n_obs = n()) %>% 
   pivot_wider(
     names_from = eop_enlarged,
     values_from = n_obs) %>% 
-  mutate_at("enlarged", ~replace(., is.na(.), 0))
-  
+  mutate_at("enlarged", ~replace(., is.na(.), 0)) %>% 
+  mutate(enlarged_ratio = enlarged / (enlarged + non_enlarged)) %>%
+  ggplot(aes(x = age_group, y = enlarged_ratio, group = sex, color = sex)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "Age group",
+       y = "Ratio of enlarged EOP") +
+  scale_color_discrete(name = "Sex", labels = c("Female", "Male")) +
+  labs(subtitle = "B")
+
+ggarrange(fhp_plot, eop_plot)
 ```
 
+* There are no individual categorized as eop-enlarged in some groups, so `is.na` is applied after `pivot_wider` to change `NA` to `0`.  
+* Plot A and B shows that the overall FHP size and ratio of having enlarged EPO are generally larger within male than female. In plot A, there is an increasing trend of FHP size when the age increases, and the highest FHP size is found in people in their 70's. In plot B, age group 2 (18-30 age) has the highest ratio of enlarged EOP, while people in age group 1, 4 and 8 are less likely to have enlarged EOP.
