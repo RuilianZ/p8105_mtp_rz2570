@@ -9,6 +9,8 @@ output: github_document
 library(tidyverse)
 library(readxl)
 library(ggpubr)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
 
 
@@ -26,7 +28,8 @@ horn_df = horn_df %>%
          eop_visibility_classification = factor(eop_visibility_classification),
          eop_shape = factor(eop_shape),
          fhp_category = factor(fhp_category)
-         )
+         ) %>% 
+  filter(!(age_group == 1))
 
 horn_df %>% 
   group_by(sex) %>% 
@@ -50,6 +53,7 @@ horn_df %>%
 * Data cleaning: read the excel and change variable names to snake case, then fill the missing data in  `eop_size_mm` with `0` create and ordered factors for catagorical variables.  
 * Describe dataset: there are values of `r ncol(horn_df)` related variables collecting from `r nrow(horn_df)` participants. The participants are defined by their sex, age, as well as the size, visibility and shape of their external occipital protuberance (EOP). There are also variables containing information of the degree of forward head protraction (FHP). There are numeric as well as categorical variables respectively depicting the value and level of corresponding variable.  
 * The age and gender distribution: the gender of participants generally distributes equally among men and women, with 614 women and 607 men. The participants come from 8 age group, among which the 2nd group (18-30 age) has the most (303) participants, and 8th group (60+ age) has the least (1) participant. The distribution of age looks right-skewed since the mode locates on group 2 and there are less participants in age group 6+. From the combined table of gender and age group, we can see the distribution of age is generally the same across gender. Also, there is no male participants in age group 8. 
+* Filter out age group 1 since there are only two members in it, one of whom is misclassified by age, and the study is looking at age 18+.
 
 ```{r plot categorical variables}
 horn_df %>% 
@@ -84,17 +88,19 @@ filter(horn_df, fhp_category == "30.8")
 
 ## Problem 2 - Visualization
 
-```{r}
+```{r improve original plots}
 fhp_plot = horn_df %>% 
-  ggplot(aes(x = age, y = fhp_size_mm, group = sex, fill = sex)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  labs(x = "Age",
+    mutate(age_group = recode(age_group, `7` = "6", `8` = "6")) %>%
+  ggplot(aes(x = age_group, y = fhp_size_mm, fill = sex)) +
+  geom_violin() +
+  labs(x = "Age group (years)",
        y = "Forward Head Protraction Size (mm)") +
-  scale_x_continuous(breaks = c(seq(from = 0, to = 80, by = 10))) + 
+  scale_x_discrete(labels = c("18-29", "30's", "40's", "50's", "60+")) +
   scale_fill_discrete(name = "Sex", labels = c("Female", "Male")) +
   labs(subtitle = "A")
 
 eop_plot = horn_df %>% 
+  mutate(age_group = recode(age_group, `7` = "6", `8` = "6")) %>% 
   mutate(eop_enlarged = ifelse(eop_size %in% c(0, 1), "non_enlarged", "enlarged")) %>% 
   group_by(sex, age_group, eop_enlarged) %>% 
   summarize(n_obs = n()) %>% 
@@ -106,13 +112,29 @@ eop_plot = horn_df %>%
   ggplot(aes(x = age_group, y = enlarged_ratio, group = sex, color = sex)) +
   geom_point() +
   geom_line() +
-  labs(x = "Age group",
+  labs(x = "Age group (years)",
        y = "Ratio of enlarged EOP") +
+  scale_x_discrete(labels = c("18-29", "30's", "40's", "50's", "60+")) +
   scale_color_discrete(name = "Sex", labels = c("Female", "Male")) +
   labs(subtitle = "B")
 
 ggarrange(fhp_plot, eop_plot)
 ```
 
-* There are no individual categorized as eop-enlarged in some groups, so `is.na` is applied after `pivot_wider` to change `NA` to `0`.  
-* Plot A and B shows that the overall FHP size and ratio of having enlarged EPO are generally larger within male than female. In plot A, there is an increasing trend of FHP size when the age increases, and the highest FHP size is found in people in their 70's. In plot B, age group 2 (18-30 age) has the highest ratio of enlarged EOP, while people in age group 1, 4 and 8 are less likely to have enlarged EOP.
+* The overall FHP size and ratio of having enlarged EPO are generally larger within male than female. There is an increasing trend of FHP size when the age increases, and the highest FHP size is found in people in their 70's. Age group 2 (18-30 age) has the highest ratio of enlarged EOP, while people in age group 1, 4 and 8 are less likely to have enlarged EOP.
+
+```{r association between FHP size and EOP size}
+horn_df %>% 
+  mutate(
+    sex = recode(sex, `0` = "Female", `1` = "Male"), 
+    age_group = recode(age_group, `2` = "18-29", `3` = "30's", `4` = "40's", `5` = "50's", `6` = "60+", `7` = "60+", `8` = "60+")) %>%
+  ggplot(aes(x = fhp_size_mm, y = eop_size_mm)) + 
+  geom_point(size = 1, alpha = .8) +
+  facet_grid(sex ~ age_group)
+```
+
+* The distribution of eop size against fhp size is not significantly different across age and sex groups, and there is no clear association between eop size and fhp size within each group.  
+```{r}
+
+```
+
