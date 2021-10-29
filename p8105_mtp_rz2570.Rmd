@@ -155,7 +155,7 @@ horn_df %>%
 
 eeop_df = horn_df %>% 
   filter(!(eop_size == "14.6")) %>% 
-  mutate(eeop_status = ifelse(as.numeric(eop_size) >= 2, 1, 0)) %>% 
+  mutate(eeop_status = ifelse(as.numeric(eop_size_mm) > 10, 1, 0)) %>% 
   group_by(eeop_status) %>% 
   summarize(n_obs = n())
 
@@ -181,7 +181,7 @@ fhp_40_proportion = fhp_40_df[2,2] / sum(fhp_40_df[ ,2])
 
 * The authors’ stated sample sizes in each age group are  inconsistent with the data available.  
 * The reported mean for FHP size is consistent with the data available, but standard deviations aren't the same.  
-* **EEOP** is **enlarged external occipital protuberance**. `eop_size` in this data can be used to calculate **prevalence**, which is `r eeop_prevalence`. This value is different from author-stated value 33%.  
+* **EEOP** is **enlarged external occipital protuberance**. `eop_size` in this data can be used to calculate **EEOP prevalence**, which is `r eeop_prevalence`. This value is slighlty different from author-stated value 33%.  
 * FHP is more common in people over 60, which is consistent to the article. Proportion of FHP >40 mm calculated with data is `r fhp_40_proportion`, which is different from the article stated 34.5%.  
 
 
