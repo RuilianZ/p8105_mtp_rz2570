@@ -62,13 +62,27 @@ d = horn_df %>%
 ggarrange(a, b, c, d)
 ```
 
-* The `14.6` in `eop_size` and `30.8` in `fhp_category` do not correctly implement the definition based on underlying continuous variable `eop_size_mm` and `fhp_size_mm`. The rows of two erroneous value are respectively extracted as below.  
+* The `14.6` in `eop_size` and `30.8` in `fhp_category` do not correctly implement the definition based on underlying continuous variable `eop_size_mm` and `fhp_size_mm`.   
 * `eop_visibility_classification` correctly implement the definition based on underlying continuous variable `eop_size_mm`.  
 * There are some missing values in `eop_shape` which need to be addressed.  
+* Further analysis will filter out age group 1 since one of the member is misclassified by age and the other one aged 17, and the study is looking at age 18+.  
+* The abnormal values are listed as below:
 
-```{r}
-filter(horn_df, eop_size == "14.6")
-filter(horn_df, fhp_category == "30.8")
+```{r etract abnormal values}
+horn_df %>% 
+  filter(age_group == "1") %>% 
+  select(sex, age, age_group) %>% 
+  knitr::kable()
+
+horn_df %>% 
+  filter(eop_size == "14.6") %>%
+  select(sex, age, eop_size_mm, eop_size) %>% 
+  knitr::kable()
+
+horn_df %>% 
+  filter(fhp_category == "30.8") %>% 
+  select(sex, age, fhp_size_mm, fhp_category) %>% 
+  knitr::kable()
 ```
 
 
@@ -77,40 +91,38 @@ filter(horn_df, fhp_category == "30.8")
 ```{r improve original plots}
 fhp_plot = horn_df %>% 
   filter(!(age_group == 1)) %>% 
-  mutate(age_group = recode(age_group, `7` = "6", `8` = "6")) %>%
+  mutate(age_group = recode(age_group, `2` = "18-29", `3` = "30's", `4` = "40's", `5` = "50's", `6` = "60+", `7` = "60+", `8` = "60+")) %>%
   ggplot(aes(x = age_group, y = fhp_size_mm, fill = sex)) +
   geom_boxplot() +
   labs(x = "Age group (years)",
        y = "Forward Head Protraction Size (mm)") +
-  scale_x_discrete(labels = c("18-29", "30's", "40's", "50's", "60+")) +
   scale_fill_discrete(name = "Sex", labels = c("Female", "Male")) +
   labs(subtitle = "A")
 
 eop_plot = horn_df %>% 
-  filter(!(age_group == 1)) %>%
-  mutate(age_group = recode(age_group, `7` = "6", `8` = "6")) %>% 
-  mutate(eop_enlarged = ifelse(eop_size %in% c(0, 1), "non_enlarged", "enlarged")) %>% 
+  filter(!(age_group == 1),
+         !(eop_size == 14.6)) %>%
+  mutate(
+    age_group = recode(age_group, `2` = "18-29", `3` = "30's", `4` = "40's", `5` = "50's", `6` = "60+", `7` = "60+", `8` = "60+"),
+    eop_enlarged = ifelse(eop_size %in% c(0, 1), "non_enlarged", "enlarged")) %>% 
   group_by(sex, age_group, eop_enlarged) %>% 
   summarize(n_obs = n()) %>% 
   pivot_wider(
     names_from = eop_enlarged,
     values_from = n_obs) %>% 
-  mutate_at("enlarged", ~replace(., is.na(.), 0)) %>% 
   mutate(enlarged_ratio = enlarged / (enlarged + non_enlarged)) %>%
   ggplot(aes(x = age_group, y = enlarged_ratio, group = sex, color = sex)) +
   geom_point() +
   geom_line() +
   labs(x = "Age group (years)",
        y = "Ratio of enlarged EOP") +
-  scale_x_discrete(labels = c("18-29", "30's", "40's", "50's", "60+")) +
   scale_color_discrete(name = "Sex", labels = c("Female", "Male")) +
   labs(subtitle = "B")
 
 ggarrange(fhp_plot, eop_plot)
 ```
 
-* Filter out age group 1 since there are only two members in it, one of whom is misclassified by age, and the study is looking at age 18+.  
-* The overall FHP size and ratio of having enlarged EPO are generally larger within male than female. There is an increasing trend of FHP size when the age increases, and the highest FHP size is found in people in their 70's. Age group 2 (18-30 age) has the highest ratio of enlarged EOP, while people in age group 1, 4 and 8 are less likely to have enlarged EOP.
+* The overall *FHP size* and *EEOP ratio* are generally larger within male than female. There is an increasing trend of FHP size when the age increases, and the highest FHP size is found in 60+ males. There is no clear age trend for EEOP ratio. People aged 18-29 has the highest ratio of EEOP, while people in their 40's have the lowest ratio of EEOP.
 
 ```{r association between FHP size and EOP size}
 horn_df %>% 
@@ -124,7 +136,7 @@ horn_df %>%
   labs(subtitle = "C")
 ```
 
-* The distribution of eop size against fhp size is not significantly different across age and sex groups, and there is no clear association between eop size and fhp size within each group.  
+* Participants aged 18-29 tend to have smaller FHP sizes, but the distribution of *EOP size* against *FHP size* is not significantly different across age and sex groups, and there is no clear association between EOP size and FHP size within each group.  
 
 ## Problem 3 – Reproducing reported results
 
