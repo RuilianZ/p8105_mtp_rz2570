@@ -122,7 +122,7 @@ eop_plot = horn_df %>%
 ggarrange(fhp_plot, eop_plot)
 ```
 
-* The overall *FHP size* and *EEOP ratio* are generally larger within male than female. There is an increasing trend of FHP size when the age increases, and the highest FHP size is found in 60+ males. There is no clear age trend for EEOP ratio. People aged 18-29 has the highest ratio of EEOP, while people in their 40's have the lowest ratio of EEOP.
+* The overall **FHP size** and **EEOP ratio** are generally larger within male than female. There is an increasing trend of FHP size when the age increases, and the highest FHP size is found in 60+ males. There is no clear age trend for EEOP ratio. People aged 18-29 has the highest ratio of EEOP, while people in their 40's have the lowest ratio of EEOP.
 
 ```{r association between FHP size and EOP size}
 horn_df %>% 
@@ -136,11 +136,11 @@ horn_df %>%
   labs(subtitle = "C")
 ```
 
-* Participants aged 18-29 tend to have smaller FHP sizes, but the distribution of *EOP size* against *FHP size* is not significantly different across age and sex groups, and there is no clear association between EOP size and FHP size within each group.  
+* Participants aged 18-29 tend to have smaller FHP sizes, but the distribution of **EOP size** against **FHP size** is not significantly different across age and sex groups, and there is no clear association between EOP size and FHP size within each group.  
 
 ## Problem 3 – Reproducing reported results
 
-```{r}
+```{r reproduce result}
 count(horn_df, age_group) %>% 
   knitr::kable()
 
@@ -153,11 +153,13 @@ horn_df %>%
     se_fhp = sd_fhp ^ 2 / sqrt(n_obs)) %>% 
   knitr::kable()
 
-horn_df %>% 
+eeop_df = horn_df %>% 
   filter(!(eop_size == "14.6")) %>% 
-  mutate(eeop = ifelse(as.numeric(eop_size) >= 2, 1, 0)) %>% 
-  group_by(eeop) %>% 
+  mutate(eeop_status = ifelse(as.numeric(eop_size) >= 2, 1, 0)) %>% 
+  group_by(eeop_status) %>% 
   summarize(n_obs = n())
+
+eeop_prevalence = eeop_df[2,2] / sum(eeop_df[ ,2])
 
 horn_df %>% 
   filter(!(age_group == 1)) %>%
@@ -166,22 +168,24 @@ horn_df %>%
   geom_bar(stat = "identity")
   
 
-horn_df %>% 
+fhp_40_df = horn_df %>% 
   select(age, fhp_size_mm) %>% 
   drop_na() %>% 
   filter(age > 60) %>% 
   mutate(fhp_over_40 = ifelse(fhp_size_mm > 40, 1, 0)) %>% 
   group_by(fhp_over_40) %>% 
   summarize(n_obs = n())
+
+fhp_40_proportion = fhp_40_df[2,2] / sum(fhp_40_df[ ,2])
 ```
 
 * The authors’ stated sample sizes in each age group are  inconsistent with the data available.  
 * The reported mean for FHP size is consistent with the data available, but standard deviations aren't the same.  
-The authors find “the prevalence of EEOP to be 33% of the study population”. What is the definition of EEOP, and what variables can you use to evaluate this claim? Is the finding consistent with the data available to you?
-* *EOP* is *enlarged external occipital protuberance*. The claim can be cacluated by `eop size`. Prevalence calculated by this data is 43%, which is different from 33%.  
-* FHP is more common in people over 60. Specific value calculated with data is 32.6%.  
+* **EEOP** is **enlarged external occipital protuberance**. `eop_size` in this data can be used to calculate **prevalence**, which is `r eeop_prevalence`. This value is different from author-stated value 33%.  
+* FHP is more common in people over 60, which is consistent to the article. Proportion of FHP >40 mm calculated with data is `r fhp_40_proportion`, which is different from the article stated 34.5%.  
+
 
 ## Prblem 4
 
-*Summarize your results, the quality of the data analysis / presentation of results in the original report, and comment on the conclusions of the reports’ authors. Do you think the data provide evidence that cell phones are causing horn growth? What other data would you like to have to address this hypothesis?*
-
+In the study population, FHP size has a positive association with age. Males are more likely to have larger FHP size and higher EEOP ratio than females. There is no clear association between EOP size and FHP size. The results based on data available is convincible, but I remain doubt on original report since there in inconsistency between author-stated values and real ones. The conclusion made in the report will be more persuasive if the sample size increases and the sampling process is less biased.   
+Due to the nature of case study, we cannot draw causal links between EOP and cellphone use. I would like to collect data on average time of electronic device use, collagen synthesis level, habit of poor posture and muscle strength of trapezius from the underlying source population.
